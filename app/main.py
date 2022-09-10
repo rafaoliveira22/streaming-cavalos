@@ -1,12 +1,6 @@
-# TODO: Caso usuário já exista, mostra um menu com opções de filmes para assistir
-# TODO: Criar opção de logout
-
 import re
 import requests
 import sqlite3
-import collections
-
-print('Seja Bem Vindo ao Streaming Cavalos!\n1 - SignIn\n2 - SignUp')
 
 #  REQUISIÇÃO VIA GET PARA A API VIA CEP,RETORNANDO O ENDEREÇO ENCONTRADO COM O CEP DIGITADO
 def getRequestCEP(inputCEP):
@@ -15,28 +9,49 @@ def getRequestCEP(inputCEP):
 
     return DATA_JSON
 
+#  REQUISIÇÃO VIA GET PARA A API VIA CEP,RETORNANDO O ENDEREÇO ENCONTRADO COM O CEP DIGITADO
+def getRequestMovies():
+    key = '' # sua key da API MoviesDB
+    BASE_URL = requests.get(f'https://api.themoviedb.org/3/movie/popular?api_key={key}&language=en-US&page=1')
+    DATA_JSON = BASE_URL.json()
+
+    return DATA_JSON['results']
+
 # LOGIN DO USUÁRIO
 def login():
     statusLogin = ''
+    opNotLogin = ''
     while True:
         # usuário vai realizar o login
+        print('\n<<< LOGIN >>>')
         userLogin = input('User: ')
         userPass = input('Senha: ')
 
-        con = sqlite3.connect('teste3.db')
+
+        con = sqlite3.connect('streamingCavalos.db')
         cur = con.cursor()
         cur.execute(f"SELECT password FROM users where userName = '{userLogin}' ")
         found = cur.fetchall()
+
         if userPass == found[0][0]:
-            statusLogin = 'logado'
+            statusLogin = 'Logado'
+            print(statusLogin)
+            listMovies()
             break
         else:
-            statusLogin = 'login inválido'
+            statusLogin = 'Login inválido'
+            opNotLogin = input(f'{statusLogin}. O que deseja fazer agora?\n1 - Cadastro\n2 - Login\nOpção: ')
+            if opNotLogin == '1':
+                register()
+            elif opNotLogin == '2':
+                login()
 
         return statusLogin
 
+
 # CADASTRO DE USUÁRIO
 def register():
+    print('\n<<< CADASTRO >>>')
     print('Parece que você ainda nao tem um cadastro, vamo lá!')
     statusRegister = 'NOT OK'
 
@@ -49,13 +64,11 @@ def register():
 
         age = input('Idade: ')
 
-        while True:
-            cpf = input('CPF: ')
-            if re.search(r'[a-z]', cpf, flags=re.I):
-                print('Você digitou letras. CPF só aceita números')
-            elif len(cpf) != 11:
-                print('Você digitou números a mais ou a menos. Digite somente números: ')
-            else: break
+        cpf = input('CPF: ')
+        if re.search(r'[a-z]', cpf, flags=re.I):
+            print('Você digitou letras. CEP só aceita números')
+        elif len(cpf) != 11:
+            print('Você digitou números a mais ou a menos. Digite somente números: ')
 
         while True:
             cep = input('CEP: ')
@@ -102,7 +115,7 @@ def register():
               f'"{user["numberHouse"]}", ' \
               f'"{user["userName"]}", ' \
               f'"{user["password"]}");'
-            database('teste3.db', user, command)
+            database('streamingCavalos.db', user, command)
             statusRegister = 'OK'
 
         return user
@@ -122,11 +135,50 @@ def database(db, user, command):
     con.execute(command)
     con.commit()
     con.close()
-    print('dados inseridos no banco')
+
+def listMovies():
+    while True:
+        i = 0
+
+        print('\n<<< STREAMING CAVALOS >>>\nFilmes disponiveis: ')
+        while True:
+            if i >= 20:
+                break
+            else:
+                #listar os filmes -> usuario vai escolher  -> 'filme rolando' -> sair do filme -> loop
+                print(f'{i+1} - {getRequestMovies()[i]["original_title"]}')
+                i = i + 1
+
+        opMovie = input('\n0 - Deslogar\nOpção: ')
+        if opMovie == '0':
+                logout()
+        elif int(opMovie) > 0 and int(opMovie) <= 20:
+            while True:
+                print('Boa escolha,rodando seu filme...')
+                opStopMovie = input('\nPara sair digite 1: ')
+                if opStopMovie == '1':
+                    confirmStop = input('Deseja realmente sair do filme?\n1 - Sim\n2 - Não\nOpção: ')
+                    if confirmStop == '1':
+                        break
+        else:
+            print('Opção inválida...')
+
+
+def logout():
+    print('\n<<< LOGOUT >>>')
+    statusLogout = input('\nDeseja realmente deslogar da sua conta?\n1 - Sim\n2 - Não. Continuar Navegando...\nOpção: ')
+    if statusLogout == '1':
+        print('Encerrando sessão...Até a próxima')
+        allOperations()
+    elif statusLogout == '2':
+        listMovies()
+
+    return statusLogout
 
 # RODA O PROGRAMA COMPLETO
 def allOperations():
     while True:
+        print('Seja Bem Vindo ao Streaming Cavalos!\n1 - SignIn\n2 - SignUp')
         opLoginOrRegister = input('Opção: ')
 
         if opLoginOrRegister == '1':
@@ -140,5 +192,17 @@ def allOperations():
             print('Digite uma opção válida...1 ou 2')
 
 allOperations()
+
+# EM TESTE...
+# def verifyCharacters(exp, length):
+#     while True:
+#         print(f'ta vindo isso: {exp}')
+#         if re.search(r'[a-z]', exp, flags=re.I) or len(exp) != length:
+#             print('Cadastro Incorreto. Lembre-se: Não digite letras nem caracteres a mais ou a menos...')
+#             exp = input('Digite novamente: ')
+#         else: break
+#
+#
+#     return exp
 
 
